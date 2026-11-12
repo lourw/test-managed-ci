@@ -21,6 +21,10 @@ launch-templates:
         script: |
           echo "SUPER_SECRET_ENV=$SUPER_SECRET_ENV"
           echo "EVEN_MORE_SUPER_SECRET_ENV=$EVEN_MORE_SUPER_SECRET_ENV"
+      - name: Install Node 24
+        uses: 'nrwl/nx-cloud-workflows/v5/workflow-steps/install-node/main.yaml'
+        inputs:
+          node_version: '24'
       - name: Restore node_modules cache
         uses: 'nrwl/nx-cloud-workflows/v5/workflow-steps/cache/main.yaml'
         inputs:
