@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=https://cloud.nx.app/nx-cloud/static/schemas/workflow.schema.json
+# Nx Cloud CI port of .github/workflows/ci.yml.
+# The GitHub Actions workflow stays in place until this one has passed on a pull request.
+# Named "Nx Cloud CI" (not "CI") so its checks are easy to tell apart from "CI / main"
+# while both pipelines run. Rename to "CI" when the GitHub workflow is removed.
+name: Nx Cloud CI
+
+on:
+  # GitHub: pull_request with no branch filter -> PRs into any branch
+  pull-requests:
+    event: PR
+  # GitHub: push to main
+  main-pushes:
+    event: PUSH
+    branches: [main]
+
+jobs:
+  main:
+    runs-on: linux-medium-js # checks out the repository and runs `npm ci` first
+    timeout-minutes: 60
+    steps:
+      # GitHub: actions/setup-node@v5 with node-version: 24
+      - name: Install Node 24
+        uses: 'nrwl/nx-cloud-workflows/main/workflow-steps/install-node/main.yaml'
+        with:
+          node_version: 24
+
+      # GitHub: actions/checkout@v5 with fetch-depth: 0.
+      # format:check below diffs against remotes/origin/main, so it needs full
+      # history and a local refs/remotes/origin/main.
+      - name: Fetch full history and origin/main
+        run: |
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            git fetch --no-tags --unshallow origin
+          fi
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+
+      # GitHub: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="e2e"
+      - name: Start CI run (distribute on 3 agents)
+        run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="e2e"
+
+      # GitHub: npx playwright install --with-deps
+      - name: Install Playwright browsers
+        uses: 'nrwl/nx-cloud-workflows/main/workflow-steps/install-browsers/main.yaml'
+
+      - name: Format check
+        run: npx nx record -- npx nx format:check --base="remotes/origin/main"
+
+      - name: Lint, test, build, typecheck, e2e
+        run: npx nx run-many -t lint test build typecheck e2e
+
+      # GitHub: `npx nx fix-ci` (if: always()) is not ported.
+      # Nx Cloud adds it when self-healing CI is on for the workspace.
