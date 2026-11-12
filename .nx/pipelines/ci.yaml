@@ -7,10 +7,37 @@ triggers:
     event: PUSH
     branches: ['main']
 
+launch-templates:
+  linux-medium-js-secrets:
+    resource-class: 'docker_linux_amd64/medium'
+    image: 'ubuntu22.04-node20.11-v10'
+    env:
+      SUPER_SECRET_ENV: '{{ secrets.SUPER_SECRET_ENV }}'
+      EVEN_MORE_SUPER_SECRET_ENV: '{{ secrets.EVEN_MORE_SUPER_SECRET_ENV }}'
+    init-steps:
+      - name: Checkout
+        uses: 'nrwl/nx-cloud-workflows/v5/workflow-steps/checkout/main.yaml'
+      - name: Print secret env vars
+        script: |
+          echo "SUPER_SECRET_ENV=$SUPER_SECRET_ENV"
+          echo "EVEN_MORE_SUPER_SECRET_ENV=$EVEN_MORE_SUPER_SECRET_ENV"
+      - name: Restore node_modules cache
+        uses: 'nrwl/nx-cloud-workflows/v5/workflow-steps/cache/main.yaml'
+        inputs:
+          key: 'package-lock.json'
+          paths: 'node_modules'
+          base-branch: 'main'
+      - name: Install node modules
+        uses: 'nrwl/nx-cloud-workflows/v5/workflow-steps/install-node-modules/main.yaml'
+
 workflows:
   main:
-    runs-on: linux-medium-js
+    runs-on: linux-medium-js-secrets
+    workers: '3 linux-medium-js-secrets'
     steps:
       - name: Run affected tasks
         script: |
           npx nx affected -t lint test build
+      - name: Print secrets from Nx tasks
+        script: |
+          npx nx run-many -t print-secrets

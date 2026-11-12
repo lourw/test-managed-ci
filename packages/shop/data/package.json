@@ -15,7 +15,20 @@
     "tags": [
       "scope:shop",
       "type:data"
-    ]
+    ],
+    "targets": {
+      "print-secrets": {
+        "executor": "nx:run-commands",
+        "cache": false,
+        "options": {
+          "commands": [
+            "echo \"[$NX_TASK_TARGET_PROJECT] SUPER_SECRET_ENV=$SUPER_SECRET_ENV\"",
+            "echo \"[$NX_TASK_TARGET_PROJECT] EVEN_MORE_SUPER_SECRET_ENV=$EVEN_MORE_SUPER_SECRET_ENV\""
+          ],
+          "parallel": false
+        }
+      }
+    }
   },
   "devDependencies": {
     "@org/models": "*"
